@@ -1,0 +1,17 @@
+[
+  {
+    "name": "midiflute",
+    "file": "midiflute",
+    "extension": "ipf",
+    "fileVersion": "v0.3.0",
+    "releaseTag": "midiflute-v0.3.0",
+    "unicode": "⛄",
+    "description": "MIDIキーボードの鍵盤を、パイドパイパーの笛の演奏にそのまま割り当てるアドオンです(1鍵=1音)。<br>※このアドオンだけでは動きません。GitHubのReleasesから midiflute.exe をダウンロードし、起動しておく必要があります。<br>https://github.com/8mada-8ma/TOSAddon/releases<br>※AI(Claude)で作成しました。動作確認は作者の環境(Windows 11 / KORG microKEY2)のみです。<br>Plays the Pied Piper flute directly from a MIDI keyboard (one key = one note).<br>※The addon alone does not work. You must download midiflute.exe from GitHub Releases and keep it running.",
+    "tags": [
+      "midi",
+      "piedpiper",
+      "fluting",
+      "music"
+    ]
+  }
+]

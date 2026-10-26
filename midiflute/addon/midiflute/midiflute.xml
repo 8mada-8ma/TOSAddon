@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<uiframe name="midiflute" x="0" y="0" width="1" height="1">
+  <frame snapclient="false" snapframe="false"/>
+  <option visible="true" closebutton="false" hideable="false" autoopen="true"/>
+  <input hittest="false" movable="false" hittestframe="false"/>
+  <layer layerlevel="1" />
+  <draw blend="0" drawtitlebar="false" drawframe="false"/>
+  <controls>
+  </controls>
+</uiframe>
