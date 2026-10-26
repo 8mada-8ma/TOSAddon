@@ -19,7 +19,7 @@ const instanceMutexName = "Local\\midiflute_tos_midi_helper"
 
 var instanceMutex windows.Handle
 
-const appVersion = "0.3.0"
+const appVersion = "0.4.1"
 
 type App struct {
 	mu            sync.Mutex
@@ -51,23 +51,38 @@ type App struct {
 	hintLbl *walk.Label
 	kb      *walk.CustomWidget
 	fgCB    *walk.CheckBox
-	ni      *walk.NotifyIcon
-	font    *walk.Font
+	langCB  *walk.ComboBox
+
+	// 言語切替で文字を差し替える部品
+	grpConn, grpStatus, grpKeys                                        *walk.GroupBox
+	lblDevice, lblTos, lblLang, lblLatency, lblLegend                  *walk.Label
+	pbRefresh, pbChange, pbOctDn, pbSemiDn, pbSemiUp, pbOctUp, pbLearn *walk.PushButton
+	actShow, actQuit                                                   *walk.Action
+	ni                                                                 *walk.NotifyIcon
+	font                                                               *walk.Font
 }
 
 func main() {
 	name, _ := windows.UTF16PtrFromString(instanceMutexName)
 	h, err := windows.CreateMutex(nil, false, name)
 	if err == windows.ERROR_ALREADY_EXISTS {
-		walk.MsgBox(nil, "midiflute",
-			"midiflute.exe はすでに起動しています。\n\nタスクトレイ(画面右下)のアイコンをクリックすると、起動中の画面を開けます。",
-			walk.MsgBoxIconInformation)
+		st := LoadSettings()
+		if st.Lang == "" {
+			st.Lang = defaultLang()
+		}
+		setLang(st.Lang)
+		walk.MsgBox(nil, "midiflute", T("already_running"), walk.MsgBoxIconInformation)
 		return
 	}
 	instanceMutex = h
 	disablePowerThrottling()
 	a := &App{held: map[int]int{}, pressed: map[int]bool{}}
 	a.settings = LoadSettings()
+	if a.settings.Lang == "" {
+		a.settings.Lang = defaultLang()
+		a.settings.Save()
+	}
+	setLang(a.settings.Lang)
 	a.wantConnected = a.settings.AutoConnect
 	a.devices = ListMidiDevices()
 	if a.settings.Device == "" && len(a.devices) > 0 {
@@ -79,10 +94,11 @@ func main() {
 	a.font, _ = walk.NewFont("Meiryo UI", 8, 0)
 
 	if err := a.buildWindow(); err != nil {
-		walk.MsgBox(nil, "midiflute", "画面を作れませんでした: "+err.Error(), walk.MsgBoxIconError)
+		walk.MsgBox(nil, "midiflute", T("ui_error")+err.Error(), walk.MsgBoxIconError)
 		return
 	}
 	a.setupTray()
+	a.applyTexts()
 	go a.midiLoop()
 	go a.maintenanceLoop()
 	go a.ackLoop()
@@ -104,6 +120,7 @@ func (a *App) setTosDir(d string) {
 	a.tosDir = d
 	a.bridge = NewBridge(AddonDir(d))
 	a.bridge.Heartbeat()
+	a.bridge.WriteLang(curLang)
 	a.settings.TosDir = d
 	a.settings.Save()
 }
@@ -234,7 +251,7 @@ func (a *App) maintenanceLoop() {
 				a.pressed = map[int]bool{}
 				a.midi.Close()
 				a.midi = nil
-				a.midiErr = "機器が外れました"
+				a.midiErr = T("midi_removed")
 			}
 			if a.midi == nil && a.wantConnected && contains(devs, a.settings.Device) {
 				a.openLocked(a.settings.Device)
@@ -291,7 +308,7 @@ func contains(list []string, s string) bool {
 func (a *App) buildWindow() error {
 	return MainWindow{
 		AssignTo: &a.mw,
-		Title:    "midiflute - ToS 笛演奏用 MIDI 受信 v" + appVersion,
+		Title:    T("title") + " v" + appVersion,
 		Icon:     walk.IconApplication(),
 		MinSize:  Size{Width: 820, Height: 470},
 		Size:     Size{Width: 900, Height: 500},
@@ -299,42 +316,46 @@ func (a *App) buildWindow() error {
 		Layout:   VBox{},
 		Children: []Widget{
 			GroupBox{
-				Title:  "接続",
-				Layout: Grid{Columns: 4},
+				AssignTo: &a.grpConn,
+				Layout:   Grid{Columns: 4},
 				Children: []Widget{
-					Label{Text: "MIDI機器"},
+					Label{AssignTo: &a.lblDevice},
 					ComboBox{AssignTo: &a.devCB, Model: a.devices, Value: a.settings.Device, Editable: false,
 						OnCurrentIndexChanged: a.onDeviceChanged},
-					PushButton{AssignTo: &a.connPB, Text: "接続", OnClicked: a.onConnect},
-					PushButton{Text: "一覧を更新", OnClicked: a.onRefreshDevices},
-					Label{Text: "ToSフォルダ"},
+					PushButton{AssignTo: &a.connPB, OnClicked: a.onConnect},
+					PushButton{AssignTo: &a.pbRefresh, OnClicked: a.onRefreshDevices},
+					Label{AssignTo: &a.lblTos},
 					LineEdit{AssignTo: &a.tosLE, ReadOnly: true, Text: a.tosDir},
-					PushButton{Text: "変更…", OnClicked: a.onChooseTos},
+					PushButton{AssignTo: &a.pbChange, OnClicked: a.onChooseTos},
 					HSpacer{},
+					Label{AssignTo: &a.lblLang},
+					ComboBox{AssignTo: &a.langCB, Model: langNames, CurrentIndex: langIndex(curLang), Editable: false,
+						OnCurrentIndexChanged: a.onLangChanged},
+					HSpacer{}, HSpacer{},
 				},
 			},
 			GroupBox{
-				Title:  "状態",
-				Layout: Grid{Columns: 3},
+				AssignTo: &a.grpStatus,
+				Layout:   Grid{Columns: 3},
 				Children: []Widget{
 					Label{Text: "MIDI:"}, Label{AssignTo: &a.midiLbl}, HSpacer{},
 					Label{Text: "ToS:"}, Label{AssignTo: &a.tosLbl}, HSpacer{},
-					Label{Text: "遅延:"}, Label{AssignTo: &a.latLbl}, HSpacer{},
+					Label{AssignTo: &a.lblLatency}, Label{AssignTo: &a.latLbl}, HSpacer{},
 				},
 			},
 			GroupBox{
-				Title:  "鍵盤の割り当て",
-				Layout: VBox{},
+				AssignTo: &a.grpKeys,
+				Layout:   VBox{},
 				Children: []Widget{
 					Composite{
 						Layout: HBox{MarginsZero: true},
 						Children: []Widget{
 							Label{AssignTo: &a.baseLbl},
-							PushButton{Text: "－1オクターブ", OnClicked: func() { a.shiftBase(-12) }},
-							PushButton{Text: "－半音", OnClicked: func() { a.shiftBase(-1) }},
-							PushButton{Text: "＋半音", OnClicked: func() { a.shiftBase(1) }},
-							PushButton{Text: "＋1オクターブ", OnClicked: func() { a.shiftBase(12) }},
-							PushButton{Text: "鍵盤で指定", OnClicked: a.onLearn},
+							PushButton{AssignTo: &a.pbOctDn, OnClicked: func() { a.shiftBase(-12) }},
+							PushButton{AssignTo: &a.pbSemiDn, OnClicked: func() { a.shiftBase(-1) }},
+							PushButton{AssignTo: &a.pbSemiUp, OnClicked: func() { a.shiftBase(1) }},
+							PushButton{AssignTo: &a.pbOctUp, OnClicked: func() { a.shiftBase(12) }},
+							PushButton{AssignTo: &a.pbLearn, OnClicked: a.onLearn},
 							HSpacer{},
 						},
 					},
@@ -346,13 +367,13 @@ func (a *App) buildWindow() error {
 						InvalidatesOnResize: true,
 						PaintPixels:         a.paintKeyboard,
 					},
-					Label{Text: "青=1オクターブ目　緑=2オクターブ目　橙=3オクターブ目　灰=鳴らない鍵盤(範囲外・未解放)　赤=押している鍵盤"},
+					Label{AssignTo: &a.lblLegend},
 				},
 			},
 			Composite{
 				Layout: HBox{MarginsZero: true},
 				Children: []Widget{
-					CheckBox{AssignTo: &a.fgCB, Text: "ToSが前面にあるときだけ演奏を送る", Checked: a.settings.ForegroundOnly,
+					CheckBox{AssignTo: &a.fgCB, Checked: a.settings.ForegroundOnly,
 						OnCheckedChanged: func() {
 							a.mu.Lock()
 							a.settings.ForegroundOnly = a.fgCB.Checked()
@@ -373,18 +394,17 @@ func (a *App) setupTray() {
 	}
 	a.ni = ni
 	ni.SetIcon(walk.IconApplication())
-	ni.SetToolTip("midiflute(クリックで表示)")
+
 	ni.MouseDown().Attach(func(x, y int, button walk.MouseButton) {
 		if button == walk.LeftButton {
 			a.restoreFromTray()
 		}
 	})
 	show := walk.NewAction()
-	show.SetText("表示")
 	show.Triggered().Attach(a.restoreFromTray)
 	quit := walk.NewAction()
-	quit.SetText("終了")
 	quit.Triggered().Attach(func() { a.mw.Close() })
+	a.actShow, a.actQuit = show, quit
 	ni.ContextMenu().Actions().Add(show)
 	ni.ContextMenu().Actions().Add(quit)
 
@@ -395,6 +415,57 @@ func (a *App) setupTray() {
 			ni.SetVisible(true)
 		}
 	})
+}
+
+// applyTexts は、言語に合わせて固定の文字を差し替える
+func (a *App) applyTexts() {
+	a.mw.SetTitle(T("title") + " v" + appVersion)
+	a.grpConn.SetTitle(T("grp_conn"))
+	a.grpStatus.SetTitle(T("grp_status"))
+	a.grpKeys.SetTitle(T("grp_keys"))
+	a.lblDevice.SetText(T("midi_device"))
+	a.lblTos.SetText(T("tos_folder"))
+	a.lblLang.SetText(T("language"))
+	a.lblLatency.SetText(T("latency"))
+	a.lblLegend.SetText(T("legend"))
+	a.pbRefresh.SetText(T("refresh"))
+	a.pbChange.SetText(T("change"))
+	a.pbOctDn.SetText(T("oct_down"))
+	a.pbSemiDn.SetText(T("semi_down"))
+	a.pbSemiUp.SetText(T("semi_up"))
+	a.pbOctUp.SetText(T("oct_up"))
+	a.pbLearn.SetText(T("learn"))
+	a.fgCB.SetText(T("fg_only"))
+	if a.ni != nil {
+		a.ni.SetToolTip(T("tray_tip"))
+	}
+	if a.actShow != nil {
+		a.actShow.SetText(T("tray_show"))
+		a.actQuit.SetText(T("tray_quit"))
+	}
+	a.mu.Lock()
+	b := a.bridge
+	a.mu.Unlock()
+	if b != nil {
+		b.WriteLang(curLang)
+	}
+	a.refreshUI()
+	if a.kb != nil {
+		a.kb.Invalidate()
+	}
+}
+
+func (a *App) onLangChanged() {
+	i := a.langCB.CurrentIndex()
+	if i < 0 || i >= len(langCodes) || langCodes[i] == curLang {
+		return
+	}
+	setLang(langCodes[i])
+	a.mu.Lock()
+	a.settings.Lang = curLang
+	a.settings.Save()
+	a.mu.Unlock()
+	a.applyTexts()
 }
 
 func (a *App) restoreFromTray() {
@@ -462,13 +533,13 @@ func (a *App) onRefreshDevices() {
 }
 
 func (a *App) onChooseTos() {
-	dlg := walk.FileDialog{Title: "Tree of Savior のインストールフォルダを選んでください"}
+	dlg := walk.FileDialog{Title: T("choose_tos")}
 	ok, err := dlg.ShowBrowseFolder(a.mw)
 	if err != nil || !ok {
 		return
 	}
 	if !IsTosDir(dlg.FilePath) {
-		walk.MsgBox(a.mw, "midiflute", "このフォルダには release と data がありません。\nTree of Savior (Japanese Ver.) のフォルダを選んでください。", walk.MsgBoxIconWarning)
+		walk.MsgBox(a.mw, "midiflute", T("not_tos"), walk.MsgBoxIconWarning)
 		return
 	}
 	a.mu.Lock()
@@ -515,50 +586,50 @@ func (a *App) refreshUI() {
 
 	switch {
 	case connected:
-		a.midiLbl.SetText("接続中: " + midiName)
-		a.connPB.SetText("切断")
+		a.midiLbl.SetText(T("midi_connected") + midiName)
+		a.connPB.SetText(T("disconnect"))
 	case want:
-		msg := "待機中(機器をつなぐと自動で接続します)"
+		msg := T("midi_waiting")
 		if midiErr != "" {
 			msg = midiErr + " / " + msg
 		}
 		a.midiLbl.SetText(msg)
-		a.connPB.SetText("切断")
+		a.connPB.SetText(T("disconnect"))
 	default:
-		a.midiLbl.SetText("切断中(他のソフトでキーボードを使えます)")
-		a.connPB.SetText("接続")
+		a.midiLbl.SetText(T("midi_off"))
+		a.connPB.SetText(T("connect"))
 	}
 
-	o3 := "未解放"
+	o3 := T("oct3_locked")
 	if oct3 {
-		o3 = "解放済み"
+		o3 = T("oct3_open")
 	}
 	switch {
 	case foreign:
-		a.tosLbl.SetText("⚠ ほかの midiflute.exe(別の版や別の場所のものを含む)が同時に動いているようです。1つだけにしてください。")
+		a.tosLbl.SetText(T("tos_foreign"))
 	case tosDir == "":
-		a.tosLbl.SetText("ToSフォルダが未設定です。「変更…」から選んでください。")
+		a.tosLbl.SetText(T("tos_nofolder"))
 	case !st.Linked:
-		a.tosLbl.SetText("未連携(ToSを起動し、キャラクターでログインすると連携します)")
+		a.tosLbl.SetText(T("tos_unlinked"))
 	case !st.Playing:
-		a.tosLbl.SetText("連携中(演奏モードではありません) / 3オクターブ目: " + o3)
+		a.tosLbl.SetText(T("tos_linked") + o3)
 	default:
-		a.tosLbl.SetText("演奏モード中 ♪ / 3オクターブ目: " + o3)
+		a.tosLbl.SetText(T("tos_playing") + o3)
 	}
 
 	if b != nil {
 		if last, med, ok := b.Latency(); ok {
-			a.latLbl.SetText(fmt.Sprintf("直近 %.0f ms / 中央値 %.0f ms", last, med))
+			a.latLbl.SetText(fmt.Sprintf(T("lat_fmt"), last, med))
 		} else {
-			a.latLbl.SetText("―(演奏すると表示されます)")
+			a.latLbl.SetText(T("lat_none"))
 		}
 	}
 
-	a.baseLbl.SetText(fmt.Sprintf("1オクターブ目のド: %s(鍵盤番号 %d)　", noteName(base), base))
+	a.baseLbl.SetText(fmt.Sprintf(T("base_fmt"), noteName(base), base))
 	if learning {
-		a.hintLbl.SetText("▶ 1オクターブ目の「ド」にしたい鍵盤を押してください")
+		a.hintLbl.SetText(T("hint_learning"))
 	} else {
-		a.hintLbl.SetText("microKEYなどのオクターブ切替を動かしたときは、「鍵盤で指定」でもう一度合わせてください。")
+		a.hintLbl.SetText(T("hint_normal"))
 	}
 }
 
@@ -618,11 +689,11 @@ func (a *App) paintKeyboard(canvas *walk.Canvas, _ walk.Rectangle) error {
 	label := func(n int) string {
 		switch n - base {
 		case 0:
-			return "ド1"
+			return T("do") + "1"
 		case 12:
-			return "ド2"
+			return T("do") + "2"
 		case 24:
-			return "ド3"
+			return T("do") + "3"
 		}
 		if n%12 == 0 {
 			return noteName(n)

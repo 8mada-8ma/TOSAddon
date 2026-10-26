@@ -156,6 +156,11 @@ func (b *Bridge) ForeignWriter() bool {
 	return strings.TrimSuffix(strings.TrimPrefix(line, "# "), ";") != b.session
 }
 
+// WriteLang はアドオンのメッセージの言語を知らせる(exe を閉じても残る)
+func (b *Bridge) WriteLang(code string) {
+	_ = os.WriteFile(b.path("lang.txt"), []byte(code), 0644)
+}
+
 func (b *Bridge) Heartbeat() {
 	_ = os.WriteFile(b.path("helper.txt"), []byte(strconv.FormatInt(time.Now().Unix(), 10)), 0644)
 }

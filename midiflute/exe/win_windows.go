@@ -16,6 +16,7 @@ var (
 	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
 	kernel32                     = windows.NewLazySystemDLL("kernel32.dll")
 	procSetProcessInformation    = kernel32.NewProc("SetProcessInformation")
+	procGetUserDefaultUILanguage = kernel32.NewProc("GetUserDefaultUILanguage")
 )
 
 var gameExes = map[string]bool{"client_tos_x64.exe": true, "client_tos.exe": true}
@@ -55,4 +56,16 @@ func disablePowerThrottling() {
 	const processPowerThrottling = 4
 	procSetProcessInformation.Call(uintptr(windows.CurrentProcess()), processPowerThrottling,
 		uintptr(unsafe.Pointer(&st)), unsafe.Sizeof(st))
+}
+
+// defaultLang は Windows の表示言語から初期の言語を決める
+func defaultLang() string {
+	id, _, _ := procGetUserDefaultUILanguage.Call()
+	switch id & 0x3FF { // 主言語ID
+	case 0x11:
+		return "ja"
+	case 0x12:
+		return "ko"
+	}
+	return "en"
 }

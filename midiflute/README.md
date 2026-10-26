@@ -1,18 +1,22 @@
 # midiflute - MIDIキーボードでパイドパイパーの笛を演奏
 
+**日本語** | [English](README.en.md) | [한국어](README.ko.md)
+
 **MIDIキーボードの鍵盤を、Tree of Savior のパイドパイパーの笛の演奏にそのまま割り当てるアドオンです。** 鍵盤を1つ押すと1つの音が鳴ります(1鍵=1音)。和音や黒鍵(#)にも対応しています。
 
 **⚠ このアドオンだけでは動きません。** MIDIキーボードの入力を受け取る **`midiflute.exe` を [Releases](https://github.com/8mada-8ma/TOSAddon/releases) からダウンロードし、起動しておく必要があります。** アドオンマネージャーでインストールできるのはアドオン(ipf)だけです。
 
 ---
 
-**English:** Plays the Pied Piper flute directly from a MIDI keyboard (one key = one note). **The addon alone does not work. You must download `midiflute.exe` from [Releases](https://github.com/8mada-8ma/TOSAddon/releases) and keep it running.** (Japanese server only. The UI is in Japanese.)
+**English:** Plays the Pied Piper flute directly from a MIDI keyboard (one key = one note). **The addon alone does not work. You must download `midiflute.exe` from [Releases](https://github.com/8mada-8ma/TOSAddon/releases) and keep it running.** (Japanese server only.) → [English README](README.en.md)
+
+**한국어:** MIDI 키보드의 건반을 파이드 파이퍼의 피리 연주에 그대로 할당하는 애드온입니다(건반 1개 = 음 1개). **이 애드온만으로는 작동하지 않습니다. [Releases](https://github.com/8mada-8ma/TOSAddon/releases)에서 `midiflute.exe`를 다운로드하여 실행해 두어야 합니다.** (일본 서버 전용) → [한국어 README](README.ko.md)
 
 ---
 
 - **対象:** 日本版 Tree of Savior(Steam)
 - **必要なもの:** Windows(64bit)、USB接続のMIDIキーボード
-- **必要なexeの版:** midiflute.exe v0.3.0 以降
+- **必要なexeの版:** midiflute.exe v0.4.1 以降
 
 > **📝 このアドオンと midiflute.exe は、AI(Anthropic の Claude)を使って作成しました。** 設計・コード・この説明文の大部分は Claude が書き、作者が自分の環境で動作を確認しています。
 
@@ -41,12 +45,21 @@
 
 アドオンマネージャー([MizukiBelhi/Addon-Manager](https://github.com/MizukiBelhi/Addon-Manager))で **midiflute** をインストールしてください。
 
-<details>
-<summary>手動で入れる場合</summary>
+**手動で入れる場合**
 
-Releases の `midiflute-vX.X.X.ipf` を、名前を **`_midiflute-⛄-vX.X.X.ipf`** に変えて、ToSのインストールフォルダの `data` フォルダに置いてください。**この名前の形でないと、ゲームに読み込まれず削除されることがあります。**
+1. [Releases](https://github.com/8mada-8ma/TOSAddon/releases) から `midiflute-v0.4.1.ipf` をダウンロードします。
+2. ファイル名を、次の名前に変えます。**⛄(雪だるま)は入力しにくいので、下の名前をコピーして貼り付けてください。**
 
-</details>
+```
+_midiflute-⛄-v0.4.1.ipf
+```
+
+   - 名前を変えるには、ファイルを右クリック →「名前の変更」(Windows 11 では右クリックメニューのアイコン)を選びます。
+   - 拡張子(`.ipf`)が表示されていない場合は、`.ipf` を除いた `_midiflute-⛄-v0.4.1` の部分だけを貼り付けてください。
+3. ToSのインストールフォルダの中の `data` フォルダに入れます。
+   - Steamでの探し方: Steamのライブラリで Tree of Savior を右クリック →「管理」→「ローカルファイルを閲覧」
+
+**この名前の形(`_名前-⛄-v版.ipf`)でないと、ゲームに読み込まれず、削除されることがあります。**
 
 ### 2. midiflute.exe をダウンロードする
 
@@ -84,6 +97,7 @@ midiflute.exe の画面の鍵盤の図で、どの鍵盤がどの音になるか
 
 - **MIDI機器 / 接続・切断:** 複数のMIDI機器があるときは選べます。「切断」を押すと、ほかのソフト(DAWなど)にキーボードを譲れます。
 - **ToSが前面にあるときだけ演奏を送る:** オフ(初期値)だと、ToSが裏にあっても演奏されます。
+- **言語 / Language:** 日本語・English・한국어 を切り替えられます。ゲーム内のメッセージも、ここで選んだ言語になります(最初は Windows の表示言語に合わせます)。
 - 最小化するとタスクトレイ(画面右下)に入ります。トレイのアイコンを右クリック →「終了」で終了します。
 - midiflute.exe は二重には起動しません。2つ目を起動すると、起動中であることをお知らせします。
 
@@ -123,6 +137,7 @@ MIDIキーボード ──▶ midiflute.exe ──(ファイル)──▶ アド
   - `ack.txt`(アドオン → exe): 処理済みの位置
   - `status.txt`(アドオン → exe): 演奏モード中か、3オクターブ目が解放済みか
   - `helper.txt`(exe → アドオン): exe が起動している証拠
+  - `lang.txt`(exe → アドオン): メッセージの言語
 - アドオンが演奏データを読むのは、演奏モードが開いている間だけです。
 
 ## ソースからビルドする
@@ -155,5 +170,11 @@ GOOS=windows GOARCH=amd64 go build -ldflags="-H windowsgui -s -w" -o midiflute.e
 
 ## 更新履歴
 
+- **v0.4.1**
+  - 1秒あたりに鳴らす音の数に上限(40音)を設けました(異常な連打をサーバーへ送らないため)
+  - midiflute.exe が動いていないときは、演奏データを読まないようにしました
+- **v0.4.0**
+  - 英語・韓国語に対応(midiflute.exe の画面とゲーム内メッセージ)
+  - 手動インストールの手順を追加
 - **v0.3.0**
   - 初回公開

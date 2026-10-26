@@ -3,10 +3,10 @@
     "name": "midiflute",
     "file": "midiflute",
     "extension": "ipf",
-    "fileVersion": "v0.3.0",
-    "releaseTag": "midiflute-v0.3.0",
+    "fileVersion": "v0.4.1",
+    "releaseTag": "midiflute-v0.4.1",
     "unicode": "⛄",
-    "description": "MIDIキーボードの鍵盤を、パイドパイパーの笛の演奏にそのまま割り当てるアドオンです(1鍵=1音)。<br>※このアドオンだけでは動きません。GitHubのReleasesから midiflute.exe をダウンロードし、起動しておく必要があります。<br>https://github.com/8mada-8ma/TOSAddon/releases<br>※AI(Claude)で作成しました。動作確認は作者の環境(Windows 11 / KORG microKEY2)のみです。<br>Plays the Pied Piper flute directly from a MIDI keyboard (one key = one note).<br>※The addon alone does not work. You must download midiflute.exe from GitHub Releases and keep it running.",
+    "description": "MIDIキーボードの鍵盤を、パイドパイパーの笛の演奏にそのまま割り当てるアドオンです(1鍵=1音)。<br>※このアドオンだけでは動きません。GitHubのReleasesから midiflute.exe をダウンロードし、起動しておく必要があります。<br>https://github.com/8mada-8ma/TOSAddon/releases<br>※AI(Claude)で作成しました。動作確認は作者の環境(Windows 11 / KORG microKEY2)のみです。<br>Plays the Pied Piper flute directly from a MIDI keyboard (one key = one note).<br>※The addon alone does not work. You must download midiflute.exe from GitHub Releases and keep it running.<br>MIDI 키보드의 건반을 파이드 파이퍼의 피리 연주에 그대로 할당하는 애드온입니다(건반 1개 = 음 1개).<br>※이 애드온만으로는 작동하지 않습니다. GitHub의 Releases에서 midiflute.exe를 다운로드하여 실행해 두어야 합니다.",
     "tags": [
       "midi",
       "piedpiper",

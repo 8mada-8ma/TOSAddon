@@ -77,12 +77,12 @@ func OpenMidi(name string) (*MidiIn, error) {
 		var h uintptr
 		r, _, _ := procInOpen.Call(uintptr(unsafe.Pointer(&h)), uintptr(i), midiCallback, 0, callbackFunction)
 		if r != 0 {
-			return nil, errors.New("この機器は開けませんでした(他のソフトが使用中の可能性があります)")
+			return nil, errors.New(T("midi_busy"))
 		}
 		procInStart.Call(h)
 		return &MidiIn{h: h, Name: name}, nil
 	}
-	return nil, errors.New("機器が見つかりません")
+	return nil, errors.New(T("midi_notfound"))
 }
 
 func (m *MidiIn) Close() {

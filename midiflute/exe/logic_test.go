@@ -122,3 +122,24 @@ func TestSteamSearch(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestTextsComplete(t *testing.T) {
+	for _, code := range langCodes {
+		for k := range texts["ja"] {
+			if texts[code][k] == "" {
+				t.Errorf("%s に %s がない", code, k)
+			}
+		}
+		if len(texts[code]) != len(texts["ja"]) {
+			t.Errorf("%s の項目数が違う", code)
+		}
+	}
+	setLang("ko")
+	if T("connect") != "연결" {
+		t.Fatal("切替できない")
+	}
+	setLang("xx")
+	if curLang != "ja" {
+		t.Fatal("不明な言語")
+	}
+}

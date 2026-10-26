@@ -1,4 +1,4 @@
--- midiflute v0.3.0
+-- midiflute v0.4.1
 -- midiflute.exe が書いた演奏イベントを読み、パイドパイパーの笛を鳴らす。
 -- events.txt の形式:
 --   1行目 "# <セッション番号>;"
@@ -17,6 +17,7 @@ g.inFile = g.dir .. "events.txt"
 g.ackFile = g.dir .. "ack.txt"
 g.statusFile = g.dir .. "status.txt"
 g.helperFile = g.dir .. "helper.txt"
+g.langFile = g.dir .. "lang.txt"   -- midiflute.exe で選んだ言語(ja / en / ko)
 g.session = g.session or ""
 g.lastSeq = g.lastSeq or 0
 g.playing = g.playing or {}
@@ -25,6 +26,10 @@ g.inMode = false
 g.helperOk = nil
 g.lastStatusAt = 0
 g.lastHelperCheck = 0
+-- 1秒あたりに鳴らす音の上限(人の演奏では超えない数。異常な連打でサーバーへ大量に送らないため)
+g.maxNotesPerSec = 40
+g.rateSec = 0
+g.rateCount = 0
 
 -- エラーだけを記録する
 local function log(msg)
@@ -37,6 +42,43 @@ end
 
 local function chat(msg)
 	pcall(CHAT_SYSTEM, "[midiflute] " .. msg)
+end
+
+local TEXTS = {
+	ja = {
+		ready = "MIDIキーボードで演奏できます。",
+		noexe_short = "midiflute.exe が起動していません",
+		noexe = "midiflute.exe が起動していません。起動すると、MIDIキーボードで演奏できます。",
+		connected = "midiflute.exe と接続しました。",
+		lost = "midiflute.exe との接続が切れました。",
+	},
+	en = {
+		ready = "You can play with your MIDI keyboard.",
+		noexe_short = "midiflute.exe is not running",
+		noexe = "midiflute.exe is not running. Start it to play with your MIDI keyboard.",
+		connected = "Connected to midiflute.exe.",
+		lost = "Lost connection to midiflute.exe.",
+	},
+	ko = {
+		ready = "MIDI 키보드로 연주할 수 있습니다.",
+		noexe_short = "midiflute.exe가 실행되지 않았습니다",
+		noexe = "midiflute.exe가 실행되지 않았습니다. 실행하면 MIDI 키보드로 연주할 수 있습니다.",
+		connected = "midiflute.exe와 연결되었습니다.",
+		lost = "midiflute.exe와의 연결이 끊어졌습니다.",
+	},
+}
+
+local function loadLang()
+	local f = io.open(g.langFile, "r")
+	if f == nil then return end
+	local code = string.match(f:read("*a") or "", "^(%a%a)")
+	f:close()
+	if code ~= nil and TEXTS[code] ~= nil then g.lang = code end
+end
+
+local function L(key)
+	local t = TEXTS[g.lang or "ja"] or TEXTS.ja
+	return t[key] or TEXTS.ja[key]
 end
 
 local function checkOctave3()
@@ -119,8 +161,14 @@ local function process()
 		local id = tonumber(idStr)
 		if seq > g.lastSeq then
 			if kind == "P" then
-				-- 未解放の3オクターブ目(25〜36)は鳴らさない
-				if id >= 1 and id <= 36 and (id < 25 or g.octave3) then
+				local now = os.time()
+				if now ~= g.rateSec then
+					g.rateSec = now
+					g.rateCount = 0
+				end
+				g.rateCount = g.rateCount + 1
+				-- 未解放の3オクターブ目(25〜36)と、上限を超えた分は鳴らさない
+				if id >= 1 and id <= 36 and (id < 25 or g.octave3) and g.rateCount <= g.maxNotesPerSec then
 					pcall(Piedpiper.ReqPlayFluting, id)
 					g.playing[id] = true
 				end
@@ -144,11 +192,12 @@ local function onModeOpen()
 	sync()
 	g.helperOk = helperAlive()
 	g.lastHelperCheck = os.time()
+	loadLang()
 	if g.helperOk then
-		chat("MIDIキーボードで演奏できます。")
+		chat(L("ready"))
 	else
-		pcall(ui.SysMsg, "midiflute.exe が起動していません")
-		chat("midiflute.exe が起動していません。起動すると、MIDIキーボードで演奏できます。")
+		pcall(ui.SysMsg, L("noexe_short"))
+		chat(L("noexe"))
 	end
 end
 
@@ -199,12 +248,16 @@ function MIDIFLUTE_UPDATE_BODY()
 		if alive ~= g.helperOk then
 			g.helperOk = alive
 			if alive then
-				chat("midiflute.exe と接続しました。")
+				loadLang()
+				chat(L("connected"))
 			else
 				stopAll()
-				chat("midiflute.exe との接続が切れました。")
+				chat(L("lost"))
 			end
 		end
 	end
-	process()
+	-- midiflute.exe が動いているときだけ演奏データを読む
+	if g.helperOk then
+		process()
+	end
 end

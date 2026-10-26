@@ -15,7 +15,7 @@ Tree of Savior(日本版)用のアドオンを配布しています。
 
 | アドオン | 概要 | 説明 |
 | --- | --- | --- |
-| **midiflute** | MIDIキーボードの鍵盤を、パイドパイパーの笛の演奏にそのまま割り当てる。**別途 midiflute.exe が必要** | **[midiflute/README.md](midiflute/README.md)** |
+| **midiflute** | MIDIキーボードの鍵盤を、パイドパイパーの笛の演奏にそのまま割り当てる。**別途 midiflute.exe が必要**(日本語 / English / 한국어) | **[日本語](midiflute/README.md)** / [English](midiflute/README.en.md) / [한국어](midiflute/README.ko.md) |
 
 > ⚠️ **midiflute はアドオンだけでは動きません。**
 > [Releases](https://github.com/8mada-8ma/TOSAddon/releases) から `midiflute.exe` をダウンロードし、起動しておく必要があります。

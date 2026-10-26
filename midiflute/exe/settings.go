@@ -13,6 +13,7 @@ type Settings struct {
 	Base           int    `json:"base"`
 	ForegroundOnly bool   `json:"foreground_only"`
 	AutoConnect    bool   `json:"auto_connect"`
+	Lang           string `json:"lang"`
 }
 
 func exeDir() string {
